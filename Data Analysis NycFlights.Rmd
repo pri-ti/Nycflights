@@ -1,0 +1,144 @@
+---
+title: "Data Analysis of NYCFlights"
+author: "Preeti Jha"
+date: "2/21/2021"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+```{r}
+library(tidyverse)
+library(skimr)
+```
+
+```{r warning=FALSE}
+library(nycflights13)
+data(flights)
+head(flights)
+```
+ 
+ 
+ 
+ 
+# Number of NA in dep_time is the number of cancelled flights
+```{r warning=FALSE}
+flights%>%
+  filter(is.na(dep_time))%>%
+  count()
+```
+# Maximum number of NA or missing values of flights is in the month of february so highest number of flight cancellations happened in *February* and lowest number of cancellations happened in the month of *november*
+```{r warning=FALSE}
+flights %>%select(month,dep_time)%>%
+  group_by(month)%>%
+  skim()%>%
+  arrange(desc(n_missing))
+
+```
+          
+# Tail number of the plane with the most flights from NYC is *N725MQ*.
+```{r warning=FALSE}
+#names(flights)
+flights %>% select(tailnum)%>%
+  group_by(tailnum)%>%
+  count(count = n())%>%
+  arrange(desc(count))
+```
+# Visualizing  number of trips per week over the year
+```{r warning=FALSE}
+
+flights %>% select(year, month, day, tailnum)%>%
+  filter(tailnum == "N725MQ")%>%
+  group_by(year,month) %>%
+  count()
+
+```
+
+
+```{r warning=FALSE}
+flights %>% filter(tailnum == "N725MQ") %>%
+  group_by(month) %>%
+  count() %>%
+  ggplot(aes(x = month, y = n)) +
+  geom_point() +
+  geom_line()+
+  ggtitle("Number of trips per week")+xlab("week")+
+  ylab("Flights per week")
+
+
+```
+
+# Planes Dataset
+
+```{r warning=FALSE}
+head(planes)
+names(planes)
+#?planes after seeing through help file of planes data it seems that year coloumn is the year of manufacturing of planes
+```
+
+# Flights Dataset
+```{r warning=FALSE}
+#Renaming departure year as year
+flights_2 <- flights%>%
+ rename(dep_year = "year")
+head(flights_2)
+
+```
+# *N381AA* is the oldest plane that flew from NYC in year 2013
+
+```{r warning=FALSE}
+#Using join to join flights_2 and planes table to know dep_year ,manufacture year and tailnum
+flights_2%>%
+  left_join(planes,by= c("tailnum" = "tailnum"))%>%
+  select(dep_year,year,tailnum)%>%
+  arrange(-desc(year))%>%
+  distinct()%>%
+  head(1)
+```
+There are 3322 airplanes that flew from New york City that are included in planes table.
+
+```{r warning=FALSE}
+flights_2%>%
+      right_join(planes, by = c("tailnum"="tailnum"))%>%
+  group_by(tailnum) %>%
+   slice(1) %>%
+      ungroup() %>%
+      count()
+```
+
+# There are *70* date missing in planes
+```{r warning=FALSE}
+ planes%>%
+      summarise(missing_date=sum(is.na(year)))
+```
+
+
+
+# The five most common manufacturers in planes dataset:
+```{r warning=FALSE}
+planes %>%
+  group_by(manufacturer) %>%
+  count(most_common_manuf = n())%>%
+  arrange(desc(most_common_manuf))%>%
+  head(5)
+
+ 
+```
+
+# The distribution of manufacturer changed over time 
+
+```{r warning=FALSE}
+planes_2 <- planes%>%mutate(manufacturer_2 = ifelse(manufacturer %in% c("BOEING", "AIRBUS INDUSTRIE", "BOMBARDIER INC", "AIRBUS", "EMBRAER") ,manufacturer,"Others"))
+
+flights %>%
+  inner_join(planes_2, by = c("tailnum" = "tailnum")) %>%
+  select(manufacturer_2, time_hour) %>%
+  group_by( manufacturer_2,time_hour) %>%
+  summarise(n = n()) %>%
+  ggplot(aes(x = time_hour, y = n, color = manufacturer_2)) +
+  geom_line() + 
+  ggtitle("Distribution of Top 5 Most Common Manufacturers", subtitle = "Airplanes flying from NYC in 2013")
+```
+
+
+
